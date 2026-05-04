@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
-import { MoodSelectionScreen } from "@/components/MoodSelectionScreen";
+import { ChatScreen } from "@/components/ChatScreen";
 import { PlayerScreen, PlayerScreenHandle } from "@/components/PlayerScreen";
 import { PlaylistPanel } from "@/components/PlaylistPanel";
 import { MoodSwitcher } from "@/components/MoodSwitcher";
@@ -52,7 +52,7 @@ export default function Home() {
   };
 
   if (!currentMood || !currentSong) {
-    return <MoodSelectionScreen onMoodSelect={handleMoodSelect} />;
+    return <ChatScreen onMoodSelect={handleMoodSelect} />;
   }
 
   return (

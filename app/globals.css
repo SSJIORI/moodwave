@@ -67,3 +67,148 @@ input[type="range"]::-moz-range-thumb {
   border: none;
   box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
 }
+
+/* ── Chat UI ── */
+
+/* User bubble — right-aligned pill */
+.chat-bubble-user {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 20px;
+  padding: 10px 18px;
+  max-width: 75%;
+}
+
+/* Blinking cursor while streaming */
+.chat-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: rgba(155, 142, 196, 0.8);
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: cursorBlink 1s steps(2) infinite;
+}
+
+@keyframes cursorBlink {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Sparkle pulse — AI thinking indicator */
+.sparkle-pulse {
+  animation: sparklePulse 1.6s ease-in-out infinite;
+}
+
+@keyframes sparklePulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 16px rgba(120, 119, 198, 0.25);
+  }
+  50% {
+    transform: scale(1.15);
+    box-shadow: 0 0 28px rgba(120, 119, 198, 0.5);
+  }
+}
+
+/* Conversation-view input */
+.chat-input-container {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(20px);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.chat-input-container:focus-within {
+  border-color: rgba(120, 119, 198, 0.35);
+  box-shadow: 0 0 30px rgba(120, 119, 198, 0.08);
+}
+
+/* Landing-view input (larger, more prominent) */
+.chat-input-container-landing {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(24px);
+  box-shadow: 0 4px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.chat-input-container-landing:focus-within {
+  border-color: rgba(120, 119, 198, 0.35);
+  box-shadow: 0 4px 40px rgba(0, 0, 0, 0.3), 0 0 40px rgba(120, 119, 198, 0.1);
+}
+
+/* Shared textarea */
+.chat-textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #ffffff;
+  font-size: 15px;
+  line-height: 1.6;
+  resize: none;
+  min-height: 24px;
+  max-height: 160px;
+  font-family: inherit;
+}
+.chat-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+}
+.chat-textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Send button */
+.chat-send-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: linear-gradient(135deg, #7877C6, #9B8EC4);
+  color: #ffffff;
+  box-shadow: 0 0 20px rgba(120, 119, 198, 0.25);
+}
+.chat-send-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 0 30px rgba(120, 119, 198, 0.4);
+}
+.chat-send-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Suggestion pills */
+.suggestion-pill {
+  padding: 8px 16px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.suggestion-pill:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(120, 119, 198, 0.3);
+  color: rgba(255, 255, 255, 0.85);
+}
