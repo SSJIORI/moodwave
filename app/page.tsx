@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef } from "react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { ChatScreen } from "@/components/ChatScreen";
 import { PlayerScreen, PlayerScreenHandle } from "@/components/PlayerScreen";
 import { PlaylistPanel } from "@/components/PlaylistPanel";
@@ -18,14 +18,12 @@ export default function Home() {
   const [isPlaylistOpen, setIsPlaylistOpen] = useState(false);
 
   const handleMoodSelect = (mood: EmotionType) => {
-    // Show player immediately with mock data
     const fallback = songsByMood[mood];
     setCurrentMood(mood);
     setPlaylist(fallback);
     setCurrentSong(fallback[0]);
     setShowMoodPicker(false);
 
-    // Fetch real songs in background and swap in
     fetchSongsByMood(mood)
       .then((songs) => {
         if (songs.length > 0) {
@@ -51,42 +49,73 @@ export default function Home() {
     setIsPlaylistOpen(false);
   };
 
-  if (!currentMood || !currentSong) {
-    return <ChatScreen onMoodSelect={handleMoodSelect} />;
-  }
-
   return (
-    <div className="relative">
-      <AnimatePresence mode="wait">
-        <PlayerScreen
-          ref={playerRef}
-          key={currentMood}
-          currentMood={currentMood}
-          currentSong={currentSong}
-          playlist={playlist}
-          onMoodChange={() => setShowMoodPicker(true)}
-          onTogglePlaylist={() => setIsPlaylistOpen((o) => !o)}
-          onSongChange={handleSongChange}
-          onLogoClick={() => { setCurrentMood(null); setCurrentSong(null); }}
-        />
+    <div style={{ position: "fixed", inset: 0, background: "#000" }}>
+      {/* ChatScreen and PlayerScreen cross-fade simultaneously */}
+      <AnimatePresence>
+        {!currentMood && (
+          <motion.div
+            key="chat"
+            style={{ position: "fixed", inset: 0 }}
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.85 }}
+          >
+            <ChatScreen onMoodSelect={handleMoodSelect} />
+          </motion.div>
+        )}
+
+        {currentMood && currentSong && (
+          <motion.div
+            key={currentMood}
+            style={{ position: "fixed", inset: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.9 }}
+          >
+            <AnimatePresence mode="wait">
+              <PlayerScreen
+                ref={playerRef}
+                key={currentMood}
+                currentMood={currentMood}
+                currentSong={currentSong}
+                playlist={playlist}
+                onMoodChange={() => setShowMoodPicker(true)}
+                onTogglePlaylist={() => setIsPlaylistOpen((o) => !o)}
+                onSongChange={handleSongChange}
+                onLogoClick={() => {
+                  setCurrentMood(null);
+                  setCurrentSong(null);
+                }}
+              />
+            </AnimatePresence>
+          </motion.div>
+        )}
       </AnimatePresence>
 
-      <PlaylistPanel
-        isOpen={isPlaylistOpen}
-        currentMood={currentMood}
-        songs={playlist}
-        currentSongId={currentSong.id}
-        onSongSelect={(song) => { playerRef.current?.selectAndPlay(song); setIsPlaylistOpen(false); }}
-        onShuffle={handleShuffle}
-        onClose={() => setIsPlaylistOpen(false)}
-      />
-
-      <MoodSwitcher
-        isOpen={showMoodPicker}
-        currentMood={currentMood}
-        onMoodSelect={handleMoodSelect}
-        onClose={() => setShowMoodPicker(false)}
-      />
+      {/* Panels live above both screens */}
+      {currentMood && currentSong && (
+        <>
+          <PlaylistPanel
+            isOpen={isPlaylistOpen}
+            currentMood={currentMood}
+            songs={playlist}
+            currentSongId={currentSong.id}
+            onSongSelect={(song) => {
+              playerRef.current?.selectAndPlay(song);
+              setIsPlaylistOpen(false);
+            }}
+            onShuffle={handleShuffle}
+            onClose={() => setIsPlaylistOpen(false)}
+          />
+          <MoodSwitcher
+            isOpen={showMoodPicker}
+            currentMood={currentMood}
+            onMoodSelect={handleMoodSelect}
+            onClose={() => setShowMoodPicker(false)}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -65,6 +65,7 @@ export const PlayerScreen = forwardRef<PlayerScreenHandle, PlayerScreenProps>(fu
     audio.volume = 0.7;
     audio.preload = "metadata";
     audioRef.current = audio;
+    autoPlayRef.current = true; // always auto-play the first song on mount
 
     const onTimeUpdate = () => {
       if (!isMountedRef.current || !audio.duration) return;
@@ -104,15 +105,17 @@ export const PlayerScreen = forwardRef<PlayerScreenHandle, PlayerScreenProps>(fu
     const audio = audioRef.current;
     if (!audio) return;
 
-    const shouldAutoPlay = autoPlayRef.current;
-    autoPlayRef.current  = false;
     setProgress(0); setCurrentSecs(0); setDuration(0);
 
     if (!currentSong.previewUrl) {
       audio.pause();
       setIsPlaying(false);
       return;
+      // autoPlayRef is NOT consumed — preserved for when real songs arrive
     }
+
+    const shouldAutoPlay = autoPlayRef.current;
+    autoPlayRef.current  = false;
 
     audio.src = currentSong.previewUrl;
 
