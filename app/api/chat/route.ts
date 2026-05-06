@@ -20,6 +20,7 @@ interface ChatMessage {
 
 export async function POST(request: Request) {
   const apiKey = process.env.GEMINI_API_KEY;
+  const fallbackApiKey = process.env.OPENROUTER_API_KEY;
 
   if (!apiKey || apiKey === "your_api_key_here") {
     return Response.json(
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
     parts: [{ text: msg.content }],
   }));
 
-  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
+  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
 
   const geminiBody = {
     contents: geminiMessages,
@@ -71,6 +72,13 @@ export async function POST(request: Request) {
       const errorText = await geminiRes.text();
       console.error("Gemini API error:", geminiRes.status, errorText);
 
+      // --- FALLBACK LOGIC ---
+      if (fallbackApiKey) {
+        console.log("Attempting fallback to OpenRouter (Gemma 2 9B)...");
+        return await handleOpenRouterFallback(messages, fallbackApiKey);
+      }
+      // ----------------------
+
       const userMessage =
         geminiRes.status === 429
           ? "I'm a little overwhelmed right now — give me a moment and try again!"
@@ -88,6 +96,7 @@ export async function POST(request: Request) {
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
 
+    let buffer = "";
     const stream = new ReadableStream({
       async pull(controller) {
         try {
@@ -97,9 +106,9 @@ export async function POST(request: Request) {
             return;
           }
 
-          const chunk = decoder.decode(value, { stream: true });
-          // Gemini SSE format: each line starts with "data: " followed by JSON
-          const lines = chunk.split("\n");
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
 
           for (const line of lines) {
             if (!line.startsWith("data: ")) continue;
@@ -132,6 +141,107 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error("Chat API error:", err);
+
+    // --- FALLBACK LOGIC (For fetch network errors) ---
+    const fallbackApiKey = process.env.OPENROUTER_API_KEY;
+    if (fallbackApiKey) {
+      console.log("Network error reaching Gemini. Attempting fallback to OpenRouter...");
+      return await handleOpenRouterFallback(messages, fallbackApiKey);
+    }
+    // -------------------------------------------------
+
     return Response.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+async function handleOpenRouterFallback(messages: { role: string; content: string }[], apiKey: string) {
+  const openAiMessages = [
+    { role: "system", content: SYSTEM_PROMPT },
+    ...messages.map((msg) => ({
+      role: msg.role === "assistant" ? "assistant" : "user",
+      content: msg.content,
+    })),
+  ];
+
+  try {
+    const isGroq = apiKey.startsWith("gsk_");
+    const endpoint = isGroq ? "https://api.groq.com/openai/v1/chat/completions" : "https://openrouter.ai/api/v1/chat/completions";
+    const modelId = isGroq ? "llama-3.1-8b-instant" : "google/gemma-2-9b-it:free";
+
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: modelId,
+        messages: openAiMessages,
+        stream: true,
+        temperature: 0.8,
+        max_tokens: 300,
+      }),
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error("OpenRouter fallback error:", res.status, errorText);
+      return Response.json({ error: "Both primary and fallback AI services are currently unavailable." }, { status: 502 });
+    }
+
+    const reader = res.body?.getReader();
+    if (!reader) {
+      return Response.json({ error: "No response body from OpenRouter" }, { status: 502 });
+    }
+
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+
+    let buffer = "";
+    const stream = new ReadableStream({
+      async pull(controller) {
+        try {
+          const { done, value } = await reader.read();
+          if (done) {
+            controller.close();
+            return;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const jsonStr = line.slice(6).trim();
+            if (!jsonStr || jsonStr === "[DONE]") continue;
+
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const text = parsed?.choices?.[0]?.delta?.content;
+              if (text) {
+                // Map back to our expected frontend format
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
+              }
+            } catch {
+              // skip malformed JSON chunks
+            }
+          }
+        } catch {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
+    });
+  } catch (err) {
+    console.error("OpenRouter fetch error:", err);
+    return Response.json({ error: "Fallback AI service failed to connect." }, { status: 500 });
   }
 }
