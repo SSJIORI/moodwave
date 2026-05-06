@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     parts: [{ text: msg.content }],
   }));
 
-  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
+  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
 
   const geminiBody = {
     contents: geminiMessages,
